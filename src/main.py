@@ -8,7 +8,7 @@ import logging
 import RPi.GPIO as GPIO
 from board import SCL, SDA
 import busio
-from oled_text import OledText, Layout32
+from oled_text import OledText, Layout32  # pip install oled-text
 from classes import Controller, Camera, Button
 
 DEBUG: bool = True
