@@ -2,30 +2,55 @@
 # by Lucas Placentino
 # Eufy Cam Controller - RaspberryPi
 
+import sys
 import time
+import logging
 import RPi.GPIO as GPIO
 from board import SCL, SDA
 import busio
 from oled_text import OledText, Layout32
 from classes import Controller, Camera, Button
 
-cameras = [
-    Camera(name="Living room", id=0, ip_addr="192.168.0.146"),
-    Camera(name="Entry hall", id=1, ip_addr="192.168.0.147"),
-    Camera(name="Kitchen", id=2, ip_addr="192.168.0.148"),
+DEBUG: bool = True
+BTN1_GPIO: int = 16
+BTN2_GPIO: int = 17
+BTN3_GPIO: int = 18
+I2C_ADDRESS: int = 0x3C  # or 0x3D (hex address)
+SCREEN_WIDTH: int = 128
+SCREEN_HEIGHT: int = 32  # or 64
+cameras: list[Camera] = [
+    Camera(
+        name="Living room",
+        id=0,
+        btn_gpio=BTN1_GPIO,
+        ip_addr="192.168.0.146"
+    ),
+    Camera(
+        name="Entry hall",
+        id=1,
+        btn_gpio=BTN2_GPIO,
+        ip_addr="192.168.0.147"
+    ),
+    Camera(
+        name="Kitchen",
+        id=2,
+        btn_gpio=BTN3_GPIO,
+        ip_addr="192.168.0.148"
+    ),
 ]
-BTN_GPIO = 16
-I2C_ADDRESS = 0x3C
-SCREEN_WIDTH = 128
-SCREEN_HEIGHT = 32
+
+# ----------------------------------------
 
 i2c = busio.I2C(SCL, SDA)
 oled = OledText(i2c, SCREEN_WIDTH, SCREEN_HEIGHT)
 oled.layout = Layout32.layout_3small()
-#oled.auto_show = False # is set to False, requires oled.show() to update screen
+# oled.auto_show = False # is set to False, requires oled.show() to update screen
 
-def loop(controller: Controller) -> None:
-    print("Starting loop...")
+controller: Controller = Controller(cameras)
+
+
+def loop() -> None:
+    logging.debug("Starting loop...")
     while True:
         pass
         # wait for button press interrupt
@@ -33,46 +58,89 @@ def loop(controller: Controller) -> None:
     #    controller.print_status()
     #    controller.check_status()
 
-def api_call_get_all_statuses(cameras :list[cameras]) -> dict[str, bool]:
-    #TODO: implement
+
+def api_call_get_all_statuses(cameras: list[cameras]) -> dict[str, bool]:
+    # TODO: implement
     pass
 
+
 def display_cameras(cameras: list[Camera]) -> None:
-    i=1
+    i = 1
     oled.clear()
     for camera in cameras:
-        print(camera.get_name()+" - IP: "+camera.get_ip()+" - Status: "+camera.get_status())
+        logging.info(camera.get_name()+" - IP: "+camera.get_ip() +
+                     " - Status: "+str(camera.get_status()))
         if i <= 3:
-            #oled.text("\uf03d "+camera.get_name()+" ON" if camera.get_status() else " OFF", i)
-            oled.text(camera.get_name() + " ON" if camera.get_status() else " OFF", i)
-        i+=1
+            # oled.text("\uf03d "+camera.get_name()+" ON" if camera.get_status() else " OFF", i)
+            oled.text(camera.get_name() +
+                      " ON" if camera.get_status() else " OFF", i)
+        i += 1
+
+
+def api_call_change_camera_status(camera: Camera) -> bool:
+    res = False
+    logging.info("API call: Changing status of "+camera.get_name() +
+                 " (id: "+str(camera.get_id())+") to " + str(not camera.get_status()))
+    # TODO: implement
+    return res
 
 
 def start() -> None:
-    print("Starting...")
+    logging.info("Starting...")
     oled.clear()
     oled.text("Starting...", 1)
-    controller = Controller(cameras)
-    print("Controller created.")
-    print("Cameras:")
+    logging.info("Cameras:")
     oled.clear()
     display_cameras(controller.get_cameras())
 
     time.sleep(2)
 
     current_statuses = api_call_get_all_statuses(controller.get_cameras())
-    i=1
+    i = 1
     for camera in controller.get_cameras():
-        camera.status = current_statuses[camera.get_name()] # TODO: set correct status to each camera
+        # TODO: set correct status to each camera
+        camera.status = current_statuses[camera.get_name()]
     display_cameras(controller.get_cameras())
-    btn = Button(BTN_GPIO)
 
-    loop(controller)
+    logging.debug("End of start()")
+    loop()
 
 
 def update_state(camera: Camera) -> bool:
-    pass
+    if api_call_change_camera_status(camera):
+        camera.status = not camera.status
+        display_cameras(controller.get_cameras())
+        return True
+    else:
+        logging.error("Error: could not update status of "+camera.get_name())
+        return False
 
 
 if __name__ == "__main__":
-    start()
+    logging.basicConfig(
+        stream=sys.stderr,
+        level=logging.DEBUG if DEBUG else logging.INFO,
+        format='%(asctime)s-%(name)s: %(levelname)s - %(message)s',
+        datefmt='% Y-%m-%d@%H: % M: % S'
+    )
+    try:
+        start()
+    except Exception as e:
+        if e == KeyboardInterrupt:
+            logging.error("KeyboardInterrupt: Exiting...", exc_info=False)
+            oled.clear()
+            oled.text("Exiting...", 1)
+            time.sleep(2)
+            sys.exit(0)
+        elif e == SystemExit:
+            logging.error("SystemExit: Exiting...", exc_info=False)
+            oled.clear()
+            oled.text("Exiting...", 1)
+            time.sleep(2)
+            sys.exit(0)
+        else:
+            logging.exception("Exception occurred")
+            oled.clear()
+            oled.text("Error: "+str(e), 1)
+            time.sleep(2)
+            sys.exit(1)

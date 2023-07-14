@@ -2,16 +2,16 @@
 # by Lucas Placentino
 # Eufy Cam Controller - RaspberryPi
 
-import signal
-import sys
+import signal, sys, time, logging
 import RPi.GPIO as GPIO
-from main import update_state
+from main import update_state, dbg
 
 class Camera():
-    def __init__(*, self, id, name="Camera", ip_addr):
+    def __init__(*, self, id, name="Camera", btn_gpio, ip_addr):
         self.id: int = id
         self.name: str = name
-        self.ip_addr: str = ip
+        self.btn: Button = Button(btn_gpio, self)
+        self.ip_addr: str = ip_addr
         self.device_id: int = device_id
         self.device_sn: str = device_sn
         self.device_name: str = device_name
@@ -19,6 +19,9 @@ class Camera():
         self.device_channel: int = device_channel
         self.station_sn: str = station_sn
         self.status: bool = False
+
+    def get_id(self) -> int:
+        return self.id
 
     def get_name(self) -> str:
         return self.name
@@ -50,21 +53,23 @@ class Controller():
         return self.get_camera(name).get_ip()
 
 class Button():
-    def __init__(self, gpio):
+    def __init__(self, gpio: int, camera: Camera):
         self.gpio: int = gpio
         #self.pressed: bool = False
+        self.camera: Camera = camera
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.gpio, GPIO.IN, pull_up_down=GPIO.PUD_UP)
         GPIO.add_event_detect(self.gpio, GPIO.FALLING, callback=self.callback, bouncetime=300)
-        signal.signal(signal.SIGINT, self.signal_handler)
-        #signal.pause()
+        signal.signal(signal.SIGINT, self.signal_handler) #? needed?
+        #signal.pause() # waits for a btn interrupt
 
     def callback(self, channel) -> None:
         #self.pressed = True
-        print("Button pressed")
-        update_state()
+        logging.info("Button "+self.camera.get_name+" pressed")
+        update_state(self.camera)
+        dbg("end of btn callback")
 
     def signal_handler(self, signal, frame) -> None:
-        print("CTRL+C, exiting...")
+        logging.info("CTRL+C, exiting...")
         GPIO.cleanup()
         sys.exit(0)
