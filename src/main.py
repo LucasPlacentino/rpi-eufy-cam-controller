@@ -43,7 +43,8 @@ def display_cameras(cameras: list[Camera]) -> None:
     for camera in cameras:
         print(camera.get_name()+" - IP: "+camera.get_ip()+" - Status: "+camera.get_status())
         if i <= 3:
-            oled.text("\uf03d "+camera.get_name()+" ON" if camera.get_status() else " OFF", i)
+            #oled.text("\uf03d "+camera.get_name()+" ON" if camera.get_status() else " OFF", i)
+            oled.text(camera.get_name() + " ON" if camera.get_status() else " OFF", i)
         i+=1
 
 
