@@ -1,147 +1,74 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 # MIT License
 # by Lucas Placentino
 # Eufy Cam Controller - RaspberryPi
 
 import sys
-import time
+import os
+import asyncio
+from asyncio import sleep
+import docker
+import json
 import logging
-import RPi.GPIO as GPIO
-from board import SCL, SDA
-import busio
-from oled_text import OledText, Layout32  # pip install oled-text
-#import luma # maybe?
-from classes import Controller, Camera, Button
+import websockets.client as ws_client
 
-DEBUG: bool = True
-BTN1_GPIO: int = 16
-BTN2_GPIO: int = 17
-BTN3_GPIO: int = 18
-I2C_ADDRESS: int = 0x3C  # or 0x3D (hex address)
-SCREEN_WIDTH: int = 128
-SCREEN_HEIGHT: int = 32  # or 64
-cameras: list[Camera] = [
-    Camera(
-        name="Living room",
-        id=0,
-        btn_gpio=BTN1_GPIO,
-        ip_addr="192.168.0.146"
-    ),
-    Camera(
-        name="Entry hall",
-        id=1,
-        btn_gpio=BTN2_GPIO,
-        ip_addr="192.168.0.147"
-    ),
-    Camera(
-        name="Kitchen",
-        id=2,
-        btn_gpio=BTN3_GPIO,
-        ip_addr="192.168.0.148"
-    ),
-]
+from lib.TP_lib import gt1151, epd2in13_V2 #? or just like this ? use V3 ?
+# ?-----
+"""
+picdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'pic')
+libdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'lib')
+if os.path.exists(libdir):
+    sys.path.append(libdir)
+    
+from TP_lib import gt1151
+from TP_lib import epd2in13_V2 #? V3 ?
+"""
+# ?-----
 
-# ----------------------------------------
+from PIL import Image,ImageDraw,ImageFont
 
-i2c = busio.I2C(SCL, SDA)
-oled = OledText(i2c, SCREEN_WIDTH, SCREEN_HEIGHT)
-oled.layout = Layout32.layout_3small()
-# oled.auto_show = False # is set to False, requires oled.show() to update screen
+logging.basicConfig(level=logging.DEBUG)
 
-controller: Controller = Controller(cameras)
+def main() -> None:
+    epd = epd2in13_V2.EPD()
+    gt = gt1151.GT1151()
+    GT_Dev = gt1151.GT_Development() #?
+    GT_Old = gt1151.GT_Development() #?
 
+    logging.info("init and Clear")
+    epd.init(epd.FULL_UPDATE)
+    gt.GT_Init()
+    epd.Clear(0xFF)
 
-def loop() -> None:
-    logging.debug("Starting loop...")
-    while True:
-        pass
-        # wait for button press interrupt
-    #    controller.update()
-    #    controller.print_status()
-    #    controller.check_status()
+    asyncio.run(ws_test()) #?
 
+async def ws_test():
+    uri: str = "ws://localhost:3000"
+    async with ws_client.connect(uri) as websocket:
+        await websocket.send("Hello world!")
 
-def api_call_get_all_statuses(cameras: list[cameras]) -> dict[str, bool]:
-    # TODO: implement
-    pass
+        await sleep(1) # it is the asynio.sleep()
 
+        logging.debug(await websocket.recv())
 
-def display_cameras(cameras: list[Camera]) -> None:
-    i = 1
-    oled.clear()
-    for camera in cameras:
-        logging.info(camera.get_name()+" - IP: "+camera.get_ip() +
-                     " - Status: "+str(camera.get_status()))
-        if i <= 3:
-            # oled.text("\uf03d "+camera.get_name()+" ON" if camera.get_status() else " OFF", i)
-            oled.text(camera.get_name() +
-                      " ON" if camera.get_status() else " OFF", i)
-        i += 1
-
-
-def api_call_change_camera_status(camera: Camera) -> bool:
-    res = False
-    logging.info("API call: Changing status of "+camera.get_name() +
-                 " (id: "+str(camera.get_id())+") to " + str(not camera.get_status()))
-    # TODO: implement
-    return res
-
-
-def start() -> None:
-    logging.info("Starting...")
-    oled.clear()
-    oled.text("Starting...", 1)
-    logging.info("Cameras:")
-    oled.clear()
-    display_cameras(controller.get_cameras())
-
-    time.sleep(2)
-
-    current_statuses = api_call_get_all_statuses(controller.get_cameras())
-    i = 1
-    for camera in controller.get_cameras():
-        # TODO: set correct status to each camera
-        camera.status = current_statuses[camera.get_name()]
-    display_cameras(controller.get_cameras())
-
-    logging.debug("End of start()")
-    loop()
-
-
-def update_state(camera: Camera) -> bool:
-    if api_call_change_camera_status(camera):
-        camera.status = not camera.status
-        display_cameras(controller.get_cameras())
-        return True
-    else:
-        logging.error("Error: could not update status of "+camera.get_name())
-        return False
-
+def return_test():
+    return json.dumps({"test": "test"})
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        stream=sys.stderr,
-        level=logging.DEBUG if DEBUG else logging.INFO,
-        format='%(asctime)s-%(name)s: %(levelname)s - %(message)s',
-        datefmt='% Y-%m-%d@%H: % M: % S'
-    )
     try:
-        start()
+        logging.info("Starting...")
+        main()
+
+    except KeyboardInterrupt:
+        logging.info("KeyboardInterrupt, exiting...")
+        sys.exit(0)
+    except SystemExit:
+        logging.info("SystemExit, exiting...")
+        sys.exit(0)
     except Exception as e:
-        if e == KeyboardInterrupt:
-            logging.error("KeyboardInterrupt: Exiting...", exc_info=False)
-            oled.clear()
-            oled.text("Exiting...", 1)
-            time.sleep(2)
-            sys.exit(0)
-        elif e == SystemExit:
-            logging.error("SystemExit: Exiting...", exc_info=False)
-            oled.clear()
-            oled.text("Exiting...", 1)
-            time.sleep(2)
-            sys.exit(0)
-        else:
-            logging.exception("Exception occurred")
-            oled.clear()
-            oled.text("Error: "+str(e), 1)
-            time.sleep(2)
-            sys.exit(1)
+        logging.exception(e)
+        sys.exit(1)
+
+# EOF
