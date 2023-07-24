@@ -1,0 +1,14 @@
+version: 3
+
+# ! TODO:
+
+services:
+  eufy_security_ws_server:
+    container_name: eufy_security_ws_server
+    image: bropat/eufy_security_ws
+    restart: unless-stopped
+    network: host
+    volumes:
+      - ./data:/data
+    env_file:
+      - .env
