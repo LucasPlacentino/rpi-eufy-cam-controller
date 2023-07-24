@@ -36,10 +36,17 @@ from PIL import Image,ImageDraw,ImageFont
 logging.basicConfig(level=logging.DEBUG)
 
 display = None
+docker_client = docker.from_env()
 
 def main() -> None:
     global display
     display = EPaperDisplay(250, 122, landscape=True, touch=True)
+
+    # TODO:
+    #docker.from_env().containers.get("eufy_cam_controller").start() #?
+    container = docker_client.containers.run(image="bropat/eufy_security_ws", detach=True, name="eufy_cam_controller", network="host", volumes={"eufy_cam_controller_data": {"bind": "/data", "mode": "rw"}})
+    logging.debug(container.logs())
+
     #epd = epd2in13_V2.EPD()
     #gt = gt1151.GT1151()
     #GT_Dev = gt1151.GT_Development() #?
@@ -80,9 +87,13 @@ if __name__ == "__main__":
         logging.exception(e)
         exit = 1
     finally:
-        display.epd.sleep() #! important?
+        display.epd.sleep() # ! important?
         time.sleep(2) # or asyncio.sleep(2) ?
         display.epd.Dev_exit()
+        
+        #TODO:
+        docker.from_env().containers.get("eufy_cam_controller").stop()
+        
         logging.info("Exiting...")
         sys.exit(exit)
 
