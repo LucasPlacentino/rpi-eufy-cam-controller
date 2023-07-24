@@ -8,6 +8,8 @@
 import json
 import logging
 
+logging.basicConfig(level=logging.DEBUG)
+
 class Device():
     def __init__(self, id: int, name: str, ip_addr: str, sn: str):
         self.id: int = id

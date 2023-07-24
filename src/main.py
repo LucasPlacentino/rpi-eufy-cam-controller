@@ -7,12 +7,16 @@
 
 import sys
 import os
-import asyncio
+import threading #? or asyncio?
+import asyncio #? or threading?
 from asyncio import sleep
+import time #?
 import docker
 import json
 import logging
 import websockets.client as ws_client
+
+from display import EPaperDisplay
 
 from lib.TP_lib import gt1151, epd2in13_V2 #? or just like this ? use V3 ?
 # ?-----
@@ -31,16 +35,20 @@ from PIL import Image,ImageDraw,ImageFont
 
 logging.basicConfig(level=logging.DEBUG)
 
-def main() -> None:
-    epd = epd2in13_V2.EPD()
-    gt = gt1151.GT1151()
-    GT_Dev = gt1151.GT_Development() #?
-    GT_Old = gt1151.GT_Development() #?
+display = None
 
-    logging.info("init and Clear")
-    epd.init(epd.FULL_UPDATE)
-    gt.GT_Init()
-    epd.Clear(0xFF)
+def main() -> None:
+    global display
+    display = EPaperDisplay(250, 122, landscape=True, touch=True)
+    #epd = epd2in13_V2.EPD()
+    #gt = gt1151.GT1151()
+    #GT_Dev = gt1151.GT_Development() #?
+    #GT_Old = gt1151.GT_Development() #?
+
+    #logging.info("init and Clear")
+    #epd.init(epd.FULL_UPDATE)
+    #gt.GT_Init()
+    #epd.Clear(0xFF)
 
     asyncio.run(ws_test()) #?
 
@@ -49,7 +57,7 @@ async def ws_test():
     async with ws_client.connect(uri) as websocket:
         await websocket.send("Hello world!")
 
-        await sleep(1) # it is the asynio.sleep()
+        await sleep(1) # it is the asyncio.sleep()
 
         logging.debug(await websocket.recv())
 
@@ -57,18 +65,25 @@ def return_test():
     return json.dumps({"test": "test"})
 
 if __name__ == "__main__":
+    exit = 0
     try:
         logging.info("Starting...")
         main()
 
     except KeyboardInterrupt:
-        logging.info("KeyboardInterrupt, exiting...")
-        sys.exit(0)
+        logging.info("KeyboardInterrupt")
+        exit = 0
     except SystemExit:
-        logging.info("SystemExit, exiting...")
-        sys.exit(0)
+        logging.info("SystemExit")
+        exit = 0
     except Exception as e:
         logging.exception(e)
-        sys.exit(1)
+        exit = 1
+    finally:
+        display.epd.sleep() #! important?
+        time.sleep(2) # or asyncio.sleep(2) ?
+        display.epd.Dev_exit()
+        logging.info("Exiting...")
+        sys.exit(exit)
 
 # EOF
