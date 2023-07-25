@@ -27,7 +27,7 @@ i = j = k = ReFlag = SelfFlag = Page = Photo_L = Photo_S = 0 #?
 
 class EPaperDisplay():
     def __init__(self, width: int, height: int, landscape: bool = True, touch: bool = True):
-        logging.debug("EPaperDisplay.__init__()")
+        logging.debug(f"EPaperDisplay.__init__()")
 
         if landscape:
             self.width = height
@@ -52,20 +52,22 @@ class EPaperDisplay():
         self.t.setDaemon(True)
         self.t.start()
 
+        self.page = PagePath[0]
+
         #self.image_buffer = Image.new('1', (self.width, self.height), 255)
-        self.image_buffer = Image.open(os.path.join(picdir, PagePath[0])) #? or blank
+        self.image_buffer = Image.open(os.path.join(picdir, self.page)) #? or blank
         self.epd.displayPartBaseImage(self.epd.getbuffer(self.image_buffer))
         self.DrawImage = ImageDraw.Draw(self.image_buffer)
         self.epd.init(self.epd.PART_UPDATE)
     
     def touch_thread_irq(self):
-        print("pthread running") #? logging.debug() ?
+        print(f"pthread running") #? logging.debug() ?
         while self.flag_t == 1 :
             if(self.gt.digital_read(self.gt.INT) == 0) :
                 self.GT_Dev.Touch = 1
             else :
                 self.GT_Dev.Touch = 0
-        print("thread:exit") #? logging.debug() ?
+        print(f"thread:exit") #? logging.debug() ?
 
     def draw(self):
         #TODO:
@@ -88,4 +90,37 @@ class EPaperDisplay():
         #TODO:
         pass
 
+    def handle_touch(self) -> dict:
+        if (self.page == PagePath[0]): # Home
+            if (1==1):
+                # touch toggle all cameras
+                logging.debug(f"Home: touched toggle all cameras")
+                return {"toggle" : "all"}
+            #TODO: check coordiantes
+            #TODO: ? programmatically get coords based on number of cameras : for i in range(sizeof(cemeras)): if(...): {"toggle": i}
+            elif(self.GT_Dev.X[0] > 29 and self.GT_Dev.X[0] < 92 and self.GT_Dev.Y[0] > 56 and self.GT_Dev.Y[0] < 95):
+                # touch camera 1
+                logging.debug(f"Home: touched camera " + device.name + f" id " + device.id) #TODO:
+                return {"toggle": device.id}
+            elif (1==1):
+                # touch camera 2
+                return {}
+            elif (1==1):
+                # touched settings button
+                logging.debug(f"Home: touched settings button")
+                return {"go_to_page": 1}
+            else:
+                return {}
+        elif (self.page == PagePath[1]): # Settings
+            if (1==1):
+                # touch home button
+                logging.debug(f"Home: touched home button")
+                return {"go_to_page": 0} # Home
+            elif (1==1):
+                # touch exit button
+                return {"exit": True}
+            else:
+                return {}
+        else:
+            return {}
 

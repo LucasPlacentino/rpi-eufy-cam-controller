@@ -16,7 +16,7 @@ import json
 import logging
 import websockets.client as ws_client
 
-from display import EPaperDisplay
+from display import EPaperDisplay, PagePath
 
 from lib.TP_lib import gt1151, epd2in13_V2 #? or just like this ? use V3 ?
 
@@ -56,6 +56,58 @@ def main() -> None:
 
     asyncio.run(ws_test()) #?
 
+
+    loop()
+
+    
+
+def loop() -> None:
+    i = j = k = ReFlag = SelfFlag = 0 #?
+    while(1):
+        #logging.debug("loop()")
+        
+        #TODO: ?
+        if(i > 12 or ReFlag == 1):
+            if(display.page == PagePath[1] and SelfFlag == 0):
+                display.epd.displayPartial(display.epd.getbuffer(display.image_buffer))
+            else:
+                display.epd.displayPartial_Wait(display.epd.getbuffer(display.image_buffer))
+            i = 0
+            k = 0
+            j += 1
+            ReFlag = 0
+            print("*** Draw Refresh ***\r\n")
+        elif(k>50000 and i>0 and display.page == PagePath[1]):
+            display.epd.displayPartial(display.epd.getbuffer(display.image_buffer))
+            i = 0
+            k = 0
+            j += 1
+            print("*** Overtime Refresh ***\r\n")
+        elif(j > 50 or SelfFlag):
+            SelfFlag = 0
+            j = 0
+            display.epd.init(display.epd.FULL_UPDATE)
+            display.epd.displayPartBaseImage(display.epd.getbuffer(display.image_buffer))
+            display.epd.init(display.epd.PART_UPDATE)
+            print("--- Self Refresh ---\r\n")
+        else:
+            k += 1
+
+        display.gt.GT_Scan(display.GT_Dev, display.GT_Old)
+        if(display.GT_Old.X[0] == display.GT_Dev.X[0] and display.GT_Old.Y[0] == display.GT_Dev.Y[0] and display.GT_Old.S[0] == display.GT_Dev.S[0]):
+            continue
+        
+        if(display.GT_Dev.TouchpointFlag):
+            #logging.debug("display touched")
+            #i += 1
+            display.GT_Dev.TouchpointFlag = 0
+            touch_res = display.handle_touch()
+            if "device" in touch_res:
+                toggle_device(touch_res["device"])
+
+def toggle_device(device_id: int) -> None:
+    logging.debug(f"toggle_device({device_id})")
+
 async def ws_test():
     uri: str = "ws://localhost:3000"
     async with ws_client.connect(uri) as websocket:
@@ -71,15 +123,15 @@ def return_test():
 if __name__ == "__main__":
     exit = 0
     try:
-        logging.info("Starting...")
+        logging.info(f"Starting...")
         main()
         global display
         display = EPaperDisplay(250, 122, landscape=True, touch=True)
     except KeyboardInterrupt:
-        logging.info("KeyboardInterrupt")
+        logging.info(f"KeyboardInterrupt")
         exit = 0
     except SystemExit:
-        logging.info("SystemExit")
+        logging.info(f"SystemExit")
         exit = 0
     except Exception as e:
         logging.exception(e)
@@ -90,10 +142,11 @@ if __name__ == "__main__":
         time.sleep(2) # or asyncio.sleep(2) ?
         display.epd.Dev_exit()
         
-        #TODO:
+        #TODO: ?
         docker.from_env().containers.get("eufy_cam_controller").stop()
+        docker.from_env().containers.get("eufy_cam_controller").remove()
         
-        logging.info("Exiting...")
+        logging.info(f"Exiting...")
         sys.exit(exit)
 
 # EOF
