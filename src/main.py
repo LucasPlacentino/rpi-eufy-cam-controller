@@ -19,13 +19,12 @@ import websockets.client as ws_client
 from display import EPaperDisplay
 
 from lib.TP_lib import gt1151, epd2in13_V2 #? or just like this ? use V3 ?
-# ?-----
-"""
+
 picdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'pic')
 libdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'lib')
 if os.path.exists(libdir):
     sys.path.append(libdir)
-    
+"""
 from TP_lib import gt1151
 from TP_lib import epd2in13_V2 #? V3 ?
 """
@@ -35,12 +34,10 @@ from PIL import Image,ImageDraw,ImageFont
 
 logging.basicConfig(level=logging.DEBUG)
 
-display = None
+#display = EPaperDisplay(250, 122, landscape=True, touch=True)
 docker_client = docker.from_env()
 
 def main() -> None:
-    global display
-    display = EPaperDisplay(250, 122, landscape=True, touch=True)
 
     # TODO:
     #docker.from_env().containers.get("eufy_cam_controller").start() #?
@@ -76,7 +73,8 @@ if __name__ == "__main__":
     try:
         logging.info("Starting...")
         main()
-
+        global display
+        display = EPaperDisplay(250, 122, landscape=True, touch=True)
     except KeyboardInterrupt:
         logging.info("KeyboardInterrupt")
         exit = 0
@@ -87,6 +85,7 @@ if __name__ == "__main__":
         logging.exception(e)
         exit = 1
     finally:
+        display.flag_t = 0
         display.epd.sleep() # ! important?
         time.sleep(2) # or asyncio.sleep(2) ?
         display.epd.Dev_exit()
