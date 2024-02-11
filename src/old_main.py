@@ -17,7 +17,7 @@ import logging
 import websockets.client as ws_client
 
 from display import EPaperDisplay, PagePath
-from models import Device, Camera, Station, Controller
+from old_models import Device, Camera, Station, Controller
 from ws_eufy_api import WSEufyApi, Message
 
 from lib.TP_lib import gt1151, epd2in13_V2 #? or just like this ? use V3 ?

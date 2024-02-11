@@ -1,10 +1,10 @@
+from __future__ import annotations
 """
 from https://github.com/fuatakgun/eufy_security/blob/master/custom_components/eufy_security/eufy_security_api/api_client.py
 """
 
 
 """Module to initialize client"""
-from __future__ import annotations
 
 import asyncio
 from enum import Enum
