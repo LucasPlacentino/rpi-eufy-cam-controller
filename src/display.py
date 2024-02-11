@@ -97,7 +97,7 @@ class EPaperDisplay():
                 logging.debug(f"Home: touched toggle all cameras")
                 return {"toggle" : "all"}
             #TODO: check coordiantes
-            #TODO: ? programmatically get coords based on number of cameras : for i in range(sizeof(cemeras)): if(...): {"toggle": i}
+            #TODO: ? programmatically get coords based on number of cameras : for i in range(len(cemeras)): if(...): {"toggle": i}
             elif(self.GT_Dev.X[0] > 29 and self.GT_Dev.X[0] < 92 and self.GT_Dev.Y[0] > 56 and self.GT_Dev.Y[0] < 95):
                 # touch camera 1
                 logging.debug(f"Home: touched camera " + device.name + f" id " + device.id) #TODO:
