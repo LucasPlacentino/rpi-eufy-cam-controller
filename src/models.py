@@ -5,10 +5,15 @@
 # by Lucas Placentino
 # Eufy Cam Controller - RaspberryPi
 
-import json
+#import json
 import logging
+from enum import Enum
 
 logging.basicConfig(level=logging.DEBUG)
+
+class DeviceState(Enum):
+    ON = 1
+    OFF = 0
 
 class Device():
     def __init__(self, id: int, name: str, ip_addr: str, sn: str):
@@ -19,11 +24,11 @@ class Device():
 
 class Camera(Device):
     def __init__(self):
-        pass
+        self.state = DeviceState.OFF
 
 class Station(Device):
     def __init__(self):
-        pass
+        self.state = DeviceState.OFF
 
 class Controller():
     def __init__(self, devices: list[Device]):
